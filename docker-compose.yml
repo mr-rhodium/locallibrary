@@ -1,0 +1,21 @@
+version: '3'
+services:
+   web:
+    build: .
+    volumes:
+      - .:/home/app
+    ports:
+      - "8000:8000"
+    container_name: library
+    restart: always
+   test:
+    build: .
+    ports:
+      - "8000:8000"
+    container_name: library_tests
+    volumes:
+      - .:/home/app
+    command: python manage.py test
+
+
+
