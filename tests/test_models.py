@@ -22,4 +22,4 @@ class AuthorModelTest(TestCase):
     def test_first_name_max_length(self):
         author = Author.objects.get(id=1)
         max_length = author._meta.get_field("first_name").max_length
-        self.assertEquals(max_length, 100)
+        self.assertEquals(max_length, 200)

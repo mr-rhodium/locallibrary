@@ -31,52 +31,67 @@ class Language(models.Model):
 
 
 class Book(models.Model):
-    title = models.CharField(max_length=250)
+    """Model representing a book (but not a specific copy of a book)."""
 
-    author = models.ForeignKey("author", on_delete=models.SET_NULL, null=True)
+    title = models.CharField(max_length=200)
+    author = models.ForeignKey("Author", on_delete=models.SET_NULL, null=True)
+    # Foreign Key used because book can only have one author, but authors can have multiple books
+    # Author as a string rather than object because it hasn't been declared yet in file.
     summary = models.TextField(
-        max_length=200, help_text="Enter a brif description of the book"
+        max_length=1000, help_text="Enter a brief description of the book"
     )
     isbn = models.CharField(
-        "ISNB", max_length=13, help_text="13 Character", unique=True
+        "ISBN",
+        max_length=13,
+        unique=True,
+        help_text='13 Character <a href="https://www.isbn-international.org/content/what-isbn'
+        '">ISBN number</a>',
     )
-    genre = models.ManyToManyField("Gene", help_text="Select a gane for this book")
+    genre = models.ManyToManyField(Genre, help_text="Select a genre for this book")
+    # ManyToManyField used because a genre can contain many books and a Book can cover many genres.
+    # Genre class has already been defined so we can specify the object above.
     language = models.ForeignKey("Language", on_delete=models.SET_NULL, null=True)
-
-    def display_gane(self):
-        return ", ".join([gane.name for gane in self.gane.all()[:3]])
-
-    display_gane.short_discription = "Gane"
-
-    def get_absolute_url(self):
-        """Return the url to access a particular book instance"""
-        return reverse("book-detall", args=[str(self.id)])
-
-    def __self__(self):
-        return self.title
 
     class Meta:
         ordering = ["title", "author"]
 
+    def display_genre(self):
+        """Creates a string for the Genre. This is required to display genre in Admin."""
+        return ", ".join([genre.name for genre in self.genre.all()[:3]])
+
+    display_genre.short_description = "Genre"
+
+    def get_absolute_url(self):
+        """Returns the url to access a particular book instance."""
+        return reverse("book-detail", args=[str(self.id)])
+
+    def __str__(self):
+        """String for representing the Model object."""
+        return self.title
+
 
 class BookInstance(models.Model):
-    id = models.UUIDField(
-        primary_key=True, default=uuid.uuid4, help_text="Uniqude ID for particular book"
-    )
+    """Model representing a specific copy of a book (i.e. that can be borrowed from the library)."""
 
-    book = models.ForeignKey("Book", on_delete=models.RESTRICT, nulll=True)
+    id = models.UUIDField(
+        primary_key=True,
+        default=uuid.uuid4,
+        help_text="Unique ID for this particular book across whole library",
+    )
+    book = models.ForeignKey("Book", on_delete=models.RESTRICT, null=True)
     imprint = models.CharField(max_length=200)
     due_back = models.DateField(null=True, blank=True)
     borrower = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
 
     @property
     def is_overdue(self):
-        return bool(self.bue_back and date.today() > self.due_back)
+        """Determines if the book is overdue based on due date and current date."""
+        return bool(self.due_back and date.today() > self.due_back)
 
     LOAN_STATUS = (
-        ("b", "Maintenance"),
+        ("d", "Maintenance"),
         ("o", "On loan"),
-        ("a", "Avalible"),
+        ("a", "Available"),
         ("r", "Reserved"),
     )
 
@@ -84,28 +99,30 @@ class BookInstance(models.Model):
         max_length=1,
         choices=LOAN_STATUS,
         blank=True,
-        defaulr="b",
+        default="d",
         help_text="Book availability",
     )
 
-    def __set__(self):
-        return f"{self.book.title} ({self.id})"
-
     class Meta:
         ordering = ["due_back"]
-        permission = ("can_mark_returned", "Set book as returned")
+        permissions = (("can_mark_returned", "Set book as returned"),)
 
-    class Author(models.Model):
-        first_name = models.CharField(max_length=200)
-        last_name = models.CharField(max_length=200)
-        date_of_birth = models.DateField(null=True, blank=True)
-        date_of_death = models.DateField("died", null=True, blank=True)
+    def __str__(self):
+        """String for representing the Model object."""
+        return "{0} ({1})".format(self.id, self.book.title)
 
-        def __str__(self) -> str:
-            return reverse("author-detail", args=[str(self.id)])
 
-        def get_absolute_url(self):
-            return reverse("author-detail", args=[str(self.id)])
+class Author(models.Model):
+    first_name = models.CharField(max_length=200)
+    last_name = models.CharField(max_length=200)
+    date_of_birth = models.DateField(null=True, blank=True)
+    date_of_death = models.DateField("died", null=True, blank=True)
 
-        class Meta:
-            ordering = ["last_name", "first_name"]
+    def __str__(self) -> str:
+        return reverse("author-detail", args=[str(self.id)])
+
+    def get_absolute_url(self):
+        return reverse("author-detail", args=[str(self.id)])
+
+    class Meta:
+        ordering = ["last_name", "first_name"]
