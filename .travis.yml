@@ -1,0 +1,10 @@
+services:
+  - docker
+
+jobs:
+  include:
+    - stage: tests
+      name: "Unit tests"
+      script:
+        - docker-compose build
+        - docker-compose run test
